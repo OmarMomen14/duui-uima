@@ -15,6 +15,7 @@ import org.apache.uima.util.XmlCasSerializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
@@ -36,20 +37,21 @@ import java.util.Objects;
 public class CRF2oTest {
     static DUUIComposer composer;
     static JCas cas;
+    static String version = System.getProperty("version");
 
     @BeforeAll
     static void beforeAll() throws CompressorException, URISyntaxException, IOException, UIMAException, SAXException {
+        System.out.println("Parser Version: " + version);
+
         composer = new DUUIComposer()
                 .withSkipVerification(true)
                 .withLuaContext(new DUUILuaContext().withJsonLibrary());
 
-        composer.addDriver(new DUUIRemoteDriver(1000));
-        composer.add(
-                new DUUIRemoteDriver.Component("http://localhost:9714"));
-        
-        // composer.addDriver(new DUUIDockerDriver().withTimeout(10000));
+        // composer.addDriver(new DUUIRemoteDriver(1000));
         // composer.add(
-        //         new DUUIDockerDriver.Component("duui-slc-crf2o/cu124:0.0.1"));
+        //         new DUUIRemoteDriver.Component("http://localhost:9714"));
+
+        composer.addDriver(new DUUIDockerDriver().withTimeout(10000));
 
         cas = JCasFactory.createJCas();
 
@@ -62,6 +64,19 @@ public class CRF2oTest {
         System.out.println("after All ...........");
     }
 
+    @BeforeEach
+    public void beforeEach() throws CompressorException, URISyntaxException, IOException, UIMAException, SAXException {
+        System.out.println("before Each ...........");
+        // Had to initiate a new composer object before each test to enable the .withParameter option 
+        composer.shutdown();
+        composer = new DUUIComposer()
+                .withSkipVerification(true)
+                .withLuaContext(new DUUILuaContext().withJsonLibrary());
+        
+        composer.addDriver(new DUUIDockerDriver().withTimeout(10000));
+
+    }
+
     @AfterEach
     public void afterEach() throws IOException, SAXException {
         composer.resetPipeline();
@@ -72,9 +87,16 @@ public class CRF2oTest {
         cas.reset();
     }
 
+
     @Test
     public void dependencyParsingCRF2oTestEn() throws Exception {
         System.out.println("dependencyParsingCRF2oTestEn");
+
+        composer.add(
+                new DUUIDockerDriver.Component(
+                        String.format("docker.texttechnologylab.org/duui-slc-crf2o/cu124:%s", version)
+                )
+        );
 
         String [] sentences = {
                 "You should always try to avoid long sentences.",
@@ -175,5 +197,97 @@ public class CRF2oTest {
 
         System.out.println("Test dependencyParsingCRF2oTestEn Passed!");
 
+    }
+
+    @Test
+    public void TestValidate() throws Exception {
+        System.out.println("TestValidate");
+
+        composer.add(
+                new DUUIDockerDriver.Component(
+                        String.format("docker.texttechnologylab.org/duui-slc-crf2o/cu124:%s", version)
+                ).withParameter("validate", "true")
+        );
+
+
+        String [] sentences = {
+                "This is not a valid standalone sentence"
+        };
+        String text =  String.join(" ", sentences);
+
+        cas.setDocumentText(text);
+        cas.setDocumentLanguage("en");
+
+        int offset = 0;
+        for (String sen : sentences) {
+            int len = sen.length();
+            Sentence sentence = new Sentence(cas, offset, offset + len);
+            sentence.addToIndexes(cas);
+            offset += len + 1;
+        }
+
+        composer.run(cas);
+
+        String[] casTokens = JCasUtil.select(cas, Token.class)
+                .stream()
+                .map(t -> Objects.isNull(t.getForm()) ? t.getCoveredText() : t.getForm().getValue())
+                .toArray(String[]::new);
+
+        assert casTokens.length == 0 : "No tokens should be generated";
+
+        String[] casDepTypes = JCasUtil.select(cas, Dependency.class)
+                .stream()
+                .map(Dependency::getDependencyType)
+                .toArray(String[]::new);
+
+        assert casDepTypes.length == 0 : "No dependencies should be generated";
+
+        System.out.println("Test TestValidate Passed!");
+    }
+
+    @Test
+    public void TestNoValidate() throws Exception {
+        System.out.println("TestNoValidate");
+
+        composer.add(
+                new DUUIDockerDriver.Component(
+                        String.format("docker.texttechnologylab.org/duui-slc-crf2o/cu124:%s", version)
+                ).withParameter("validate", "false")
+        );
+
+
+        String [] sentences = {
+                "This is not a valid standalone sentence"
+        };
+        String text =  String.join(" ", sentences);
+
+        cas.setDocumentText(text);
+        cas.setDocumentLanguage("en");
+
+        int offset = 0;
+        for (String sen : sentences) {
+            int len = sen.length();
+            Sentence sentence = new Sentence(cas, offset, offset + len);
+            sentence.addToIndexes(cas);
+            offset += len + 1;
+        }
+
+        composer.run(cas);
+
+        String[] casTokens = JCasUtil.select(cas, Token.class)
+                .stream()
+                .map(t -> Objects.isNull(t.getForm()) ? t.getCoveredText() : t.getForm().getValue())
+                .toArray(String[]::new);
+
+        assert casTokens.length > 0 : "Tokens should be generated even if the sentence is invalid";
+
+        String[] casDepTypes = JCasUtil.select(cas, Dependency.class)
+                .stream()
+                .map(Dependency::getDependencyType)
+                .toArray(String[]::new);
+
+        assert casDepTypes.length > 0 : "Dependencies should be generated even if the sentence is invalid";
+
+        System.out.println("Test TestNoValidate Passed!");
     }
 }

@@ -139,7 +139,7 @@ class CRF2oProcessor(ProcessorABC[Dataset]):
         for annotation, offset in zip(annotations, offsets):
             
             checked = CRF2oSentenceValidator.check(annotation)
-            if validate and not checked.is_valid():
+            if validate and not checked.is_standalone():
                 logger.info("CRF2o: Sentence is not standalone. Skipping.")
                 continue
                         

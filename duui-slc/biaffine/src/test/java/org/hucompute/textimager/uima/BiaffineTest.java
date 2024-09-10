@@ -68,6 +68,7 @@ public class BiaffineTest {
     public void beforeEach() throws CompressorException, URISyntaxException, IOException, UIMAException, SAXException {
         System.out.println("before Each ...........");
         // Had to initiate a new composer object before each test to enable the .withParameter option 
+        composer.shutdown();
         composer = new DUUIComposer()
                 .withSkipVerification(true)
                 .withLuaContext(new DUUILuaContext().withJsonLibrary());
