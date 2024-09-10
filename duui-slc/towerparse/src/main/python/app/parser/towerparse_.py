@@ -146,7 +146,7 @@ class TowerparseProcessor(ProcessorABC[StanzaDocument]):
         tokens_indices = 0
         for annotation, offset in zip(annotations, offsets):
             checked = TowerparseSentenceValidator.check(annotation.sentences[0])
-            if validate and not checked.is_valid():
+            if validate and not checked.is_standalone():
                 logger.info("Towerparse: Sentence is invalid. Skipping.")
                 continue
                         
