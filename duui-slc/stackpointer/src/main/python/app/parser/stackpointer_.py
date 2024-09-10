@@ -127,7 +127,7 @@ class StackpointerProcessor(ProcessorABC[StanzaDocument]):
         tokens_indices = 0
         for annotation, offset in zip(annotations, offsets):
             checked = StackpointerSentenceValidator.check(annotation.sentences[0])
-            if validate and not checked.is_valid():
+            if validate and not checked.is_standalone():
                 logger.info("Stackpointer: Sentence is invalid. Skipping.")
                 continue
                         
