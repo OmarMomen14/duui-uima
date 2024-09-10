@@ -127,7 +127,7 @@ class CoreNLPProcessor(ProcessorABC[CoreNLPDocument]):
     def post_process(
         annotations: list[CoreNLPDocument],
         offsets: list[Offset],
-        validate: bool = False,
+        validate: bool = True,
     ):
         tokens_indices = 0
         results = DuuiResponse(sentences=None, tokens=[], dependencies=[])
