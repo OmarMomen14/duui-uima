@@ -124,16 +124,22 @@ class CRF2oProcessor(ProcessorABC[Dataset]):
         return self.post_process(
             annotations,
             offsets,
+            validate=request.validate_sentences,
         )
 
     @staticmethod
-    def post_process(annotations: list[CoNLLSentence], offsets: list[Offset]):
+    def post_process(
+        annotations: list[CoNLLSentence],
+        offsets: list[Offset],
+        validate: bool = True,    
+    ):
 
         results = DuuiResponse(sentences=None, tokens=[], dependencies=[])
         tokens_indices = 0
         for annotation, offset in zip(annotations, offsets):
             
-            if not bool(CRF2oSentenceValidator.check(annotation).is_standalone()):
+            checked = CRF2oSentenceValidator.check(annotation)
+            if validate and not checked.is_valid():
                 logger.info("CRF2o: Sentence is not standalone. Skipping.")
                 continue
                         

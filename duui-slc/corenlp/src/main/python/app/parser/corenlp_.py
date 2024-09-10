@@ -120,10 +120,15 @@ class CoreNLPProcessor(ProcessorABC[CoreNLPDocument]):
         return self.post_process(
             annotations,
             offsets,
+            validate=request.validate_sentences,
         )
 
     @staticmethod
-    def post_process(annotations: list[CoreNLPDocument], offsets: list[Offset]):
+    def post_process(
+        annotations: list[CoreNLPDocument],
+        offsets: list[Offset],
+        validate: bool = False,
+    ):
         tokens_indices = 0
         results = DuuiResponse(sentences=None, tokens=[], dependencies=[])
         
@@ -133,7 +138,9 @@ class CoreNLPProcessor(ProcessorABC[CoreNLPDocument]):
                 raise ValueError("CoreNLP split a single sentence into multiple sentences")
             
             sentence = sentences[0]
-            if not bool(CoreNLPSentenceValidator.check(annotation).is_standalone()):
+            
+            checked = CoreNLPSentenceValidator.check(annotation)
+            if validate and not checked.is_standalone():
                 logger.info("CoreNLP: Sentence is not standalone. Skipping.")
                 continue
             

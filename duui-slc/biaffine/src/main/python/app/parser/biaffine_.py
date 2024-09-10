@@ -124,16 +124,22 @@ class BiaffineProcessor(ProcessorABC[Dataset]):
         return self.post_process(
             annotations,
             offsets,
+            validate=request.validate_sentences,
         )
 
     @staticmethod
-    def post_process(annotations: list[CoNLLSentence], offsets: list[Offset]):
+    def post_process(
+        annotations: list[CoNLLSentence],
+        offsets: list[Offset],
+        validate: bool = True,
+    ):
 
         results = DuuiResponse(sentences=None, tokens=[], dependencies=[])
         tokens_indices = 0
         for annotation, offset in zip(annotations, offsets):
             
-            if not bool(BiaffineSentenceValidator.check(annotation).is_standalone()):
+            checked = BiaffineSentenceValidator.check(annotation)
+            if validate and not checked.is_standalone():
                 logger.info("Biaffine: Sentence is not standalone. Skipping.")
                 continue
                         

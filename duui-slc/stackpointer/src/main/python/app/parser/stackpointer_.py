@@ -113,16 +113,22 @@ class StackpointerProcessor(ProcessorABC[StanzaDocument]):
         return self.post_process(
             annotations,
             offsets,
+            validate=request.validate_sentences,
         )
 
     @staticmethod
-    def post_process(annotations: list[StanzaDocument], offsets: list[Offset]):
+    def post_process(
+        annotations: list[StanzaDocument],
+        offsets: list[Offset],
+        validate: bool = True,             
+    ):
 
         results = DuuiResponse(sentences=None, tokens=[], dependencies=[])
         tokens_indices = 0
         for annotation, offset in zip(annotations, offsets):
-            if not bool(StackpointerSentenceValidator.check(annotation.sentences[0]).is_standalone()):
-                logger.info("Stackpointer: Sentence is not standalone. Skipping.")
+            checked = StackpointerSentenceValidator.check(annotation.sentences[0])
+            if validate and not checked.is_valid():
+                logger.info("Stackpointer: Sentence is invalid. Skipping.")
                 continue
                         
             sentence_begin_index = tokens_indices
