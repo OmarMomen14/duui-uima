@@ -63,20 +63,15 @@ class CoreNLPSentenceValidator(SentenceValidatorABC[CoreNLPDocument]):
     @classmethod
     def check(cls, doc: CoreNLPDocument):
         if not doc.text.strip()[0].isupper():
-            logger.info("CoreNLP: Sentence does not start with a capitalized character")
             return cls(False)
         if doc.text.strip()[-1] not in EOS_MARKERS:
-            logger.info("CoreNLP: Sentence does not end with a period, question mark, or exclamation mark")
             return cls(True, False)
         tokens = doc.sentence[0].token
         if not any(token.pos in POS_VERBS for token in tokens):
-            logger.info("CoreNLP: Sentence does not contain a verb")
             return cls(True, True, False)
         if doc.text.count('"') % 2 != 0:
-            logger.info("CoreNLP: The number of quotation marks is not even")
             return cls(True, True, True, False)
         if doc.text.count("(") != doc.text.count(")"):
-            logger.info("CoreNLP: The number of left brackets is not equal to that of right brackets")
             return cls(True, True, True, True, False)
         return cls(True, True, True, True, True)
 
@@ -113,7 +108,7 @@ class CoreNLPProcessor(ProcessorABC[CoreNLPDocument]):
         for offset in adjusted_offsets:
             try:
                 annotations.append(nlp.annotate(text_utf16[offset.begin : offset.end], properties={'ssplit.isOneSentence': 'true'}))
-                logger.info(f"CoreNLP: Processed a sentence 1: {text_utf16[offset.begin : offset.end]}")
+                logger.info(f"CoreNLP: Processed a sentence: {text_utf16[offset.begin : offset.end]}")
             except Exception as e:
                 logger.error(f"CoreNLP Parsing Error: {e}")
 
